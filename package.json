@@ -1,0 +1,17 @@
+{
+  "name": "eosio-account-watcher",
+  "description": "eosio account watcher and notifier",
+  "author": "Michael Clark",
+  "license": "MIT",
+  "devDependencies": {
+    "prettier": "^2.8.4",
+    "serverless-bundle": "^6.0.0",
+    "serverless-offline": "^12.0.4"
+  },
+  "dependencies": {
+    "atomicassets": "^1.5.1",
+    "aws-sdk": "^2.1317.0",
+    "axios": "^1.3.3",
+    "node-fetch": "^3.3.0"
+  }
+}

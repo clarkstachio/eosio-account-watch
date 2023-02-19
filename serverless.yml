@@ -1,0 +1,53 @@
+org: clarkstachio
+app: eosio-account-watch
+service: eosio-account-watch
+frameworkVersion: '3'
+useDotenv: true
+
+provider:
+  name: aws
+  runtime: nodejs16.x
+  iam:
+    role:
+      statements:
+        - Effect: Allow
+          Action:
+            - 'dynamodb:PutItem'
+            - 'dynamodb:GetItem'
+          Resource:
+            - { 'Fn::GetAtt': ['StatusesTable', 'Arn'] }
+  environment:
+    ATOMIC_API: ${env:ATOMIC_API}
+    WATCH_ACCOUNT: ${env:WATCH_ACCOUNT}
+    NOTIFICATION_HOOK: ${env:NOTIFICATION_HOOK}
+    NOTIFICATION_INFO_URL: ${env:NOTIFICATION_INFO_URL}
+    INVENTORY_OK_THRESHOLD: ${env:INVENTORY_OK_THRESHOLD}
+    INVENTORY_LOW_THRESHOLD: ${env:INVENTORY_LOW_THRESHOLD}
+    INVENTORY_VERY_LOW_THRESHOLD: ${env:INVENTORY_VERY_LOW_THRESHOLD}
+
+functions:
+  checkInventory:
+    handler: src/handlers.checkInventory
+    maximumRetryAttempts: 0
+    events:
+      - schedule: rate(2 minutes)
+
+plugins:
+  - serverless-offline
+  - serverless-bundle
+
+resources:
+  Resources:
+    StatusesTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: StatusesTable
+        ProvisionedThroughput:
+          ReadCapacityUnits: 1
+          WriteCapacityUnits: 1
+        AttributeDefinitions:
+          - AttributeName: statusType
+            AttributeType: S
+        KeySchema:
+          - AttributeName: statusType
+            KeyType: HASH
