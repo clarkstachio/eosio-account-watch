@@ -1,6 +1,6 @@
 org: clarkstachio
-app: eosio-account-watch
-service: eosio-account-watch
+app: eosio-account-watcher
+service: eosio-account-watcher
 frameworkVersion: '3'
 useDotenv: true
 
@@ -16,21 +16,33 @@ provider:
             - 'dynamodb:GetItem'
           Resource:
             - { 'Fn::GetAtt': ['StatusesTable', 'Arn'] }
+  stage: ${opt:stage, 'local'}
   environment:
     ATOMIC_API: ${env:ATOMIC_API}
+    ASSET_URL: ${env:ASSET_URL}
+    IPFS_URL: ${env:IPFS_URL}
+    ACCOUNT_URL: ${env:ACCOUNT_URL}
+    TRANSACTION_URL: ${env:TRANSACTION_URL}
     WATCH_ACCOUNT: ${env:WATCH_ACCOUNT}
     NOTIFICATION_HOOK: ${env:NOTIFICATION_HOOK}
-    NOTIFICATION_INFO_URL: ${env:NOTIFICATION_INFO_URL}
+    NOTIFICATION_SENDER: ${env:NOTIFICATION_SENDER}
+    NOTIFICATION_AVATAR_IPFS_HASH: ${env:NOTIFICATION_AVATAR_IPFS_HASH}
     INVENTORY_OK_THRESHOLD: ${env:INVENTORY_OK_THRESHOLD}
     INVENTORY_LOW_THRESHOLD: ${env:INVENTORY_LOW_THRESHOLD}
     INVENTORY_VERY_LOW_THRESHOLD: ${env:INVENTORY_VERY_LOW_THRESHOLD}
+    STATUSES_TABLE: '${self:custom.statusesTable}'
 
 functions:
   checkInventory:
-    handler: src/handlers.checkInventory
+    handler: src/handlers.checkInventoryHandler
     maximumRetryAttempts: 0
     events:
-      - schedule: rate(2 minutes)
+      - schedule: rate(1 minute)
+  checkTransfers:
+    handler: src/handlers.checkTransfersHandler
+    maximumRetryAttempts: 0
+    events:
+      - schedule: rate(1 minute)
 
 plugins:
   - serverless-offline
@@ -41,13 +53,20 @@ resources:
     StatusesTable:
       Type: AWS::DynamoDB::Table
       Properties:
-        TableName: StatusesTable
+        TableName: '${self:custom.statusesTable}'
         ProvisionedThroughput:
-          ReadCapacityUnits: 1
-          WriteCapacityUnits: 1
+          ReadCapacityUnits: 3
+          WriteCapacityUnits: 3
         AttributeDefinitions:
+          - AttributeName: account
+            AttributeType: S
           - AttributeName: statusType
             AttributeType: S
         KeySchema:
-          - AttributeName: statusType
+          - AttributeName: account
             KeyType: HASH
+          - AttributeName: statusType
+            KeyType: RANGE
+
+custom:
+  statusesTable: '${self:service}-statuses-${self:provider.stage}'
